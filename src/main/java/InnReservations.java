@@ -35,11 +35,11 @@ public class InnReservations {
 		Scanner scanner = new Scanner(System.in);
 		Boolean quit = false;
 		while (!quit) {
-			System.out.println("Enter a command...");
-			String user = scanner.nextLine();
-			if (user.equals("Get Rooms and Reservations")) {
+			System.out.println("Enter a number from the following:\n" + "1. Get Rooms and Reservations\n");
+			String input = scanner.nextLine();
+			if (input.equals("1")) {
 				getRooms();
-			} else if (user.equals("Quit")) {
+			} else if (input.equals("Quit")) {
 				quit = true;
 			}
 		}
@@ -58,10 +58,80 @@ public class InnReservations {
 					int maxOcc = rs.getInt("maxOcc");
 					float basePrice = rs.getFloat("basePrice");
 					String decor = rs.getString("decor");
-					System.out.print(
+					System.out.println(
 							rc + ' ' + rn + ' ' + beds + ' ' + bedType + ' ' + maxOcc + ' ' + basePrice + ' ' + decor);
 				}
-				System.out.println("----------------------");
+				System.out.println("----------------------\n");
+			} catch (SQLException e) {
+				System.out.println("Error.");
+			}
+		} catch (SQLException e) {
+			System.out.println("Errorrrrr");
+		}
+	}
+
+	// FR2
+	private void makeReservations() {
+		try (Connection conn = DriverManager.getConnection(JDBC_URL, JDBC_USER, JDBC_PASSWORD)) {
+			try (Statement stmt = conn.createStatement()) {
+				Scanner scanner = new Scanner(System.in);
+				System.out.println("Enter Your First Name: ");
+				String first = scanner.nextLine();
+				System.out.println("Enter Your Last Name: ");
+				String last = scanner.nextLine();
+				System.out.println("Enter The Room Code: ");
+				String code = scanner.nextLine();
+				System.out.println("Enter your arrival date (YYYY-MM-DD): ");
+				String arrival = scanner.nextLine();
+				System.out.println("Enter your departure date (YYYY-MM-DD): ");
+				String departure = scanner.nextLine();
+				System.out.println("Enter the number of children: ");
+				int kids = scanner.nextInt();
+				System.out.println("Enter the number of adults: ");
+				int adults = scanner.nextInt();
+				ResultSet rs = stmt.executeQuery("SELECT * FROM lab7_rooms WHERE Room='");
+				while (rs.next()) {
+
+				}
+				System.out.println("----------------------\n");
+			} catch (SQLException e) {
+				System.out.println("Error.");
+			}
+		} catch (SQLException e) {
+			System.out.println("Errorrrrr");
+		}
+	}
+
+	// FR5
+	private void getSummary() {
+		try (Connection conn = DriverManager.getConnection(JDBC_URL, JDBC_USER, JDBC_PASSWORD)) {
+			try (Statement stmt = conn.createStatement()) {
+				String query = "";
+				/*
+				 * WITH monthRev AS (SELECT Room, Month, SUM(Price) as monthRevenue FROM( SELECT
+				 * CODE, Room, MONTHNAME(CheckOut) as Month, DATEDIFF(Checkout, CheckIn) * Rate
+				 * as Price FROM reservations ) as theTable GROUP BY Room, Month ORDER BY Room),
+				 * totRev AS(SELECT Room, SUM(monthRevenue) as totalRevenue FROM( SELECT Room,
+				 * Month, SUM(Price) as monthRevenue FROM( SELECT CODE, Room,
+				 * MONTHNAME(CheckOut) as Month, DATEDIFF(Checkout, CheckIn) * Rate as Price
+				 * FROM reservations ) as otherTable GROUP BY Room, Month ORDER BY Room ) as
+				 * thirdTable GROUP BY Room)
+				 * 
+				 * SELECT * FROM totRev NATURAL JOIN monthRev
+				 */
+				ResultSet rs = stmt.executeQuery(query);
+				while (rs.next()) {
+					String rc = rs.getString("RoomCode");
+					String rn = rs.getString("RoomName");
+					int beds = rs.getInt("Beds");
+					String bedType = rs.getString("bedType");
+					int maxOcc = rs.getInt("maxOcc");
+					float basePrice = rs.getFloat("basePrice");
+					String decor = rs.getString("decor");
+					System.out.println(
+							rc + ' ' + rn + ' ' + beds + ' ' + bedType + ' ' + maxOcc + ' ' + basePrice + ' ' + decor);
+				}
+				System.out.println("----------------------\n");
 			} catch (SQLException e) {
 				System.out.println("Error.");
 			}
@@ -264,10 +334,12 @@ public class InnReservations {
 				stmt.execute(
 						"CREATE TABLE lab7_reservations (CODE int(11) PRIMARY KEY, Room char(5), CheckIn DATE, Checkout DATE, Rate float, LastName varchar(15), FirstName varchar(15), Adults int(11), Kids int(11), FOREIGN KEY (Room) REFERENCES lab7_rooms (RoomCode))");
 				stmt.execute(
-						"INSERT INTO lab7_rooms (RoomCode, RoomName, Beds, bedType, maxOcc, basePrice, decor) VALUES ('HBB', 'Hello Barbie Brie', 2, 'Queen', 4, 100.0, 'traditional')");
+						"INSERT INTO lab7_rooms (RoomCode, RoomName, Beds, bedType, maxOcc, basePrice, decor) VALUES ('HBB', 'Hello Barbie Beds', 2, 'Queen', 4, 100.0, 'traditional')");
 
 				stmt.execute(
 						"INSERT INTO lab7_reservations (CODE, Room, CheckIn, Checkout, Rate, LastName, FirstName, Adults, Kids) VALUES (10105, 'HBB', '2010-10-23', '2010-10-25', 100, 'SELBIG', 'CONRAD', 1, 0)");
+				stmt.execute(
+						"INSERT INTO lab7_reservations (CODE, Room, CheckIn, Checkout, Rate, LastName, FirstName, Adults, Kids) VALUES (10111, 'HBB', '2010-10-28', '2010-10-30', 100, 'GREENBERG', 'TROY', 1, 0)");
 
 				ResultSet rs = stmt.executeQuery("SELECT * FROM lab7_rooms");
 				while (rs.next()) {
