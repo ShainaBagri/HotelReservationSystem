@@ -38,7 +38,11 @@ public class InnReservations {
 			String input = scanner.nextLine();
 			if (input.equals("1")) {
 				getRooms();
-			} else if (input.equals("4")) {
+			} else if (input.equals("2")) {
+                makeReservation();
+            } else if (input.equals("3")) {
+                updateReservation();
+            } else if (input.equals("4")) {
 				cancelReservation();
 			} else if (input.equals("5")) {
 				getSummary();
@@ -79,7 +83,7 @@ public class InnReservations {
 	}
 
 	// FR2
-	private void makeReservations() {
+	private void makeReservation() {
 		try (Connection conn = DriverManager.getConnection(JDBC_URL, JDBC_USER, JDBC_PASSWORD)) {
 			try (Statement stmt = conn.createStatement()) {
 				Scanner scanner = new Scanner(System.in);
@@ -109,6 +113,99 @@ public class InnReservations {
 			System.err.println("Errorrrrr");
 		}
 	}
+
+    // FR3
+    private void updateReservation() {
+		try (Connection conn = DriverManager.getConnection(JDBC_URL, JDBC_USER, JDBC_PASSWORD)) {
+			Scanner scanner = new Scanner(System.in);
+			System.out.println("Enter reservation code: ");
+			Integer code = Integer.valueOf(scanner.nextLine());
+			System.out.println("Enter First Name (or 'No Change'): ");
+			String firstname = scanner.nextLine();
+            System.out.println("Enter Last Name (or 'No Change'): ");
+			String lastname = scanner.nextLine();
+            System.out.println("Enter Begin Date (YYYY-MM-DD) (or 'No Change'): ");
+			String checkin = scanner.nextLine();
+            System.out.println("Enter End Date (YYYY-MM-DD) (or 'No Change'): ");
+			String checkout = scanner.nextLine();
+            System.out.println("Enter Number of Children (or 'No Change'): ");
+			String kids = scanner.nextLine();
+            System.out.println("Enter Number of Adults (or 'No Change'): ");
+			String adults = scanner.nextLine();
+
+            Boolean foundFirst = false;
+
+			List<Object> params = new ArrayList<Object>();
+            StringBuilder sb = new StringBuilder("UPDATE lab7_reservations SET");
+            if (!"no change".equalsIgnoreCase(firstname)) {
+                sb.append(" FirstName = ?");
+                params.add(firstname);
+                foundFirst = true;
+            }
+            if (!"no change".equalsIgnoreCase(lastname)) {
+                if (foundFirst) {
+                    sb.append(" AND");
+                }
+                sb.append(" LastName = ?");
+                params.add(lastname);
+                foundFirst = true;
+            }
+            if (!"no change".equalsIgnoreCase(checkin)) {
+                if (foundFirst) {
+                    sb.append(" AND");
+                }
+                sb.append(" CheckIn = ?");
+                params.add(checkin);
+                foundFirst = true;
+            }
+            if (!"no change".equalsIgnoreCase(checkout)) {
+                if (foundFirst) {
+                    sb.append(" AND");
+                }
+                sb.append(" Checkout = ?");
+                params.add(checkout);
+                foundFirst = true;
+            }
+            if (!"no change".equalsIgnoreCase(kids)) {
+                if (foundFirst) {
+                    sb.append(" AND");
+                }
+                sb.append(" Kids = ?");
+                params.add(Integer.valueOf(kids));
+                foundFirst = true;
+            }
+            if (!"no change".equalsIgnoreCase(adults)) {
+                if (foundFirst) {
+                    sb.append(" AND");
+                }
+                sb.append(" Adults = ?");
+                params.add(Integer.valueOf(adults));
+            }
+            sb.append(" WHERE CODE = ?");
+            params.add(code);
+
+			try (PreparedStatement pstmt = conn.prepareStatement(sb.toString())) {
+				int i=1;
+                for (Object p : params) {
+                    pstmt.setObject(i++, p);
+                }
+
+				try {
+					pstmt.executeUpdate();
+					System.out.println("Change Successful");
+				} catch (SQLException e) {
+					System.err.println("Error Updating SQL Statement");
+					System.err.println("SQLException: " + e.getMessage());
+				}
+			} catch (SQLException e) {
+				System.err.println("Error Creating SQL Statement");
+				System.err.println("SQLException: " + e.getMessage());
+			}
+		} catch (SQLException e) {
+			System.err.println("Error Connecting to JDBC Driver");
+			System.err.println("SQLException: " + e.getMessage());
+		}
+    }
 
 	// FR4
 	private void cancelReservation() {
