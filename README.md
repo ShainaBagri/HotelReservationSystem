@@ -13,6 +13,7 @@ UI is a menu in terminal with numbered options.
 Used PreparedStatements to protect against SQL Insert attacks.
 User can succesfully make and update reservations.
 Conflicting dates will not be accepted.
+Added an extra menu option to display the full reservations database (option 6)
 
 
 Known Bugs/Deficiencies:
