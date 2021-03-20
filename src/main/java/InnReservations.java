@@ -35,7 +35,7 @@ public class InnReservations {
 		int codeCounter = 15000;
 		while (!quit) {
 			System.out.println(
-					"Enter a number from the following:\n1. Get Rooms and Reservations\n4. Cancel Reservation\n5. Get Revenue Summary\n");
+					"Enter a number from the following:\n1. Get Rooms and Reservations\n2. Make Reservation\n3. Update Reservation\n4. Cancel Reservation\n5. Get Revenue Summary\n6. Print Database");
 			String input = scanner.nextLine();
 			if (input.equals("1")) {
 				getRooms();
@@ -103,55 +103,96 @@ public class InnReservations {
 			int kids = scanner.nextInt();
 			System.out.println("Enter the number of adults: ");
 			int adults = scanner.nextInt();
+			int people = kids + adults;
 
 			List<Object> params1 = new ArrayList<Object>();
-			StringBuilder sb1 = new StringBuilder("SELECT * FROM lab7_reservations ");
-			sb1.append("WHERE Room = ?");
+			StringBuilder sb1 = new StringBuilder(
+					"SELECT * FROM lab7_reservations A JOIN lab7_rooms B ON A.Room=B.RoomCode");
+			sb1.append(" WHERE A.Room = ?");
 			params1.add(code);
-			sb1.append(" AND 0 >= DATEDIFF(day, CheckIn, ?)");
+			sb1.append(" AND 0 <= DATEDIFF(day, CheckIn, ?)");
 			params1.add(departure);
-			sb1.append(" AND 0 <= DATEDIFF(day, Checkout, ?)");
+			sb1.append(" AND 0 >= DATEDIFF(day, Checkout, ?)");
 			params1.add(arrival);
+			sb1.append(" AND B.maxOcc <= ?");
+			params1.add(people);
 
 			try (PreparedStatement pstmt = conn.prepareStatement(sb1.toString())) {
 				pstmt.setObject(1, code);
 				pstmt.setObject(2, departure);
 				pstmt.setObject(3, arrival);
+				pstmt.setObject(4, people);
 				ResultSet rs = pstmt.executeQuery();
+				if (rs.next()) {
+					System.err.println("Reservation inputs invalid.");
+					return;
+				}
 			} catch (SQLException e) {
 				System.err.println("Error Updating SQL Statement");
 				System.err.println("SQLException: " + e.getMessage());
+			}
+
+			List<Object> params2 = new ArrayList<Object>();
+			/*
+			 * DATEDIFF('day', ${start_date}, ${end_date}) + 1 - DATEDIFF('week',
+			 * ${start_date}, DATEADD('day', 1, ${end_date})) - DATEDIFF('week',
+			 * ${start_date}, ${end_date}) AS weekdays DATEDIFF(DAY, CheckIn, Checkout) as
+			 * totalDays, (DATEDIFF(DAY, CheckIn, Checkout) + 1)-(DATEDIFF(WEEK, CheckIn,
+			 * DATEADD(DAY, 1, Checkout))-DATEDIFF(WEEK, CheckIn, Checkout) as weekDays,
+			 */
+			StringBuilder query = new StringBuilder("SELECT RoomCode, RoomName, bedType, basePrice FROM lab7_rooms");
+			query.append(" WHERE RoomCode = ?");
+			params2.add(code);
+			Float rate = 0.0f;
+			String roomCode = "";
+			String roomName = "";
+			String bedType = "";
+			try (PreparedStatement pstmt = conn.prepareStatement(query.toString())) {
+				pstmt.setObject(1, code);
+				ResultSet rs = pstmt.executeQuery();
+				while (rs.next()) {
+					roomCode = rs.getString("RoomCode");
+					roomName = rs.getString("RoomName");
+					bedType = rs.getString("bedType");
+					rate = rs.getFloat("basePrice");
+				}
+			} catch (SQLException e) {
+				System.err.println("Error.");
 			}
 
 			List<Object> params = new ArrayList<Object>();
 			StringBuilder sb = new StringBuilder(
 					"INSERT INTO lab7_reservations (CODE, Room, CheckIn, Checkout, Rate, LastName, FirstName, Adults, Kids) VALUES (");
-			sb.append("?, ?, ?, ?, ?, ?, ?, ?)");
+			sb.append("?, ?, ?, ?, ?, ?, ?, ?, ?)");
 			params.add(codeCounter);
-			params.add(first);
-			params.add(last);
 			params.add(code);
 			params.add(arrival);
 			params.add(departure);
-			params.add(kids);
+			params.add(rate);
+			params.add(last);
+			params.add(first);
 			params.add(adults);
+			params.add(kids);
 
 			try (PreparedStatement pstmt2 = conn.prepareStatement(sb.toString())) {
 				pstmt2.setObject(1, codeCounter);
-				pstmt2.setObject(2, first);
-				pstmt2.setObject(3, last);
-				pstmt2.setObject(4, code);
-				pstmt2.setObject(5, arrival);
-				pstmt2.setObject(6, departure);
-				pstmt2.setObject(7, kids);
+				pstmt2.setObject(2, code);
+				pstmt2.setObject(3, arrival);
+				pstmt2.setObject(4, departure);
+				pstmt2.setObject(5, rate);
+				pstmt2.setObject(6, last);
+				pstmt2.setObject(7, first);
 				pstmt2.setObject(8, adults);
+				pstmt2.setObject(9, kids);
 				pstmt2.executeUpdate();
 				System.out.println("Reservation Successful");
+				System.out.println("Name: " + first + " " + last + "\n" + "Room: " + roomName + "(" + roomCode + ")\n"
+						+ "CheckIn: " + arrival + "\n" + "Checkout: " + departure + "\n" + "Adults: " + adults + "\t"
+						+ "Children: " + kids);
 			} catch (SQLException e) {
 				System.err.println("Error Updating SQL Statement");
 				System.err.println("SQLException: " + e.getMessage());
 			}
-
 			System.out.println("----------------------\n");
 		} catch (SQLException e) {
 			System.err.println("Error.");
@@ -352,15 +393,15 @@ public class InnReservations {
 						+ " FROM lab7_reservations" + ") AS otherTable" + " GROUP BY Room, Month" + " ORDER BY Room"
 						+ ") AS thirdTable GROUP BY Room";
 				String query = "SELECT A.Room, Month, monthRevenue, totalRevenue FROM (" + totRev + ") A NATURAL JOIN ("
-						+ monthRev + ") B";
+						+ monthRev + ") B ORDER BY Room, Month";
 				ResultSet rs = stmt.executeQuery(query);
 
 				while (rs.next()) {
 					String room = rs.getString("Room");
 					String month = rs.getString("Month");
 					Float monthRevenue = rs.getFloat("monthRevenue");
-					Float totRevenue = rs.getFloat("totRevenue");
-					System.out.println(room + ' ' + month + ' ' + monthRevenue);
+					Float totRevenue = rs.getFloat("totalRevenue");
+					System.out.println(room + ' ' + month + ' ' + monthRevenue + ' ' + totRevenue);
 				}
 				System.out.println("----------------------\n");
 
@@ -415,8 +456,9 @@ public class InnReservations {
 					float basePrice = rs.getFloat("basePrice");
 					String decor = rs.getString("decor");
 
-					System.out.println(
-							rc + ' ' + rn + ' ' + beds + ' ' + bedType + ' ' + maxOcc + ' ' + basePrice + ' ' + decor);
+					// System.out.println(
+					// rc + ' ' + rn + ' ' + beds + ' ' + bedType + ' ' + maxOcc + ' ' + basePrice +
+					// ' ' + decor);
 				}
 			}
 		}
